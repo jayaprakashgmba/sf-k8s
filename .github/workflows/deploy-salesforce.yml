@@ -9,26 +9,32 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    # 1. Checkout repo
+    # 1️⃣ Checkout the repository
     - name: Checkout code
       uses: actions/checkout@v4
 
-    # 2. Setup gcloud CLI
-    - name: Set up gcloud CLI
+    # 2️⃣ Set up gcloud CLI and authenticate using Service Account
+    - name: Set up gcloud
       uses: google-github-actions/setup-gcloud@v2
       with:
         project_id: grand-forge-472709-a0
         service_account_key: ${{ secrets.GCP_SA_KEY }}
         export_default_credentials: true
 
-    # 3. Authenticate GKE cluster
-    - name: Get GKE credentials
+    # 3️⃣ Get GKE cluster credentials (kubectl context)
+    - name: Authenticate GKE
       run: |
         gcloud container clusters get-credentials jpcluster \
           --zone us-central1-a \
           --project grand-forge-472709-a0
 
-    # 4. Apply Salesforce deploy Job
+    # 4️⃣ Apply Kubernetes Secrets and ConfigMap (optional if already applied)
+    - name: Apply Salesforce Secrets and ConfigMap
+      run: |
+        kubectl apply -f kubernetes/base/secret-salesforce.yaml -n default
+        kubectl apply -f kubernetes/base/configmap.yaml -n default
+
+    # 5️⃣ Apply Salesforce deployment Job
     - name: Deploy Salesforce Job
       run: |
         kubectl apply -f kubernetes/base/job-deploy.yaml -n default
