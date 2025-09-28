@@ -3,40 +3,55 @@ kind: Job
 metadata:
   name: salesforce-deploy
 spec:
-  backoffLimit: 0
   template:
     spec:
-      serviceAccountName: salesforce-deployer
-      restartPolicy: Never
       containers:
       - name: sf-cli
-        image: salesforce/cli:latest
-        command:
-          - /bin/sh
-          - -c
+        image: ghcr.io/salesforce/sfdx:latest
+        env:
+          - name: SF_USERNAME
+            valueFrom:
+              secretKeyRef:
+                name: salesforce-secret
+                key: SF_USERNAME
+          - name: SF_CLIENT_ID
+            valueFrom:
+              secretKeyRef:
+                name: salesforce-secret
+                key: SF_CLIENT_ID
+          - name: SF_LOGIN_URL
+            valueFrom:
+              configMapKeyRef:
+                name: salesforce-config
+                key: SF_LOGIN_URL
+          - name: SF_ALIAS
+            valueFrom:
+              configMapKeyRef:
+                name: salesforce-config
+                key: SF_ALIAS
+          - name: SF_TEST_LEVEL
+            valueFrom:
+              configMapKeyRef:
+                name: salesforce-config
+                key: SF_TEST_LEVEL
+        command: ["/bin/sh", "-c"]
+        args:
           - |
-            echo "Authorizing org with JWT..."
-            sf org login jwt \
-              --client-id $SF_CLIENT_ID \
-              --jwt-key-file /certs/server.key \
-              --username $SF_USERNAME \
-              --alias $SF_ALIAS \
-              --instance-url $SF_LOGIN_URL
-            echo "Deploying metadata..."
+            echo "Starting Salesforce Deployment..."
             sf project deploy start \
-              --manifest salesforce/manifest/package.xml \
               --target-org $SF_ALIAS \
-              --test-level $SF_TEST_LEVEL
+              --jwt-key-file /certs/server.key \
+              --client-id $SF_CLIENT_ID \
+              --test-level $SF_TEST_LEVEL \
+              --json
+            echo "Deployment completed."
         volumeMounts:
           - name: salesforce-key
             mountPath: /certs
             readOnly: true
-        envFrom:
-          - configMapRef:
-              name: salesforce-config
-          - secretRef:
-              name: salesforce-secret
+      restartPolicy: Never
       volumes:
         - name: salesforce-key
           secret:
             secretName: salesforce-key
+  backoffLimit: 0
