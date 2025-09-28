@@ -1,4 +1,4 @@
-name: Deploy to Salesforce via Kubernetes
+name: Deploy Salesforce via GKE
 
 on:
   push:
@@ -7,12 +7,29 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     steps:
-    - name: Checkout Repo
+    # 1. Checkout repo
+    - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Apply K8s Job
+    # 2. Setup gcloud CLI
+    - name: Set up gcloud CLI
+      uses: google-github-actions/setup-gcloud@v2
+      with:
+        project_id: grand-forge-472709-a0
+        service_account_key: ${{ secrets.GCP_SA_KEY }}
+        export_default_credentials: true
+
+    # 3. Authenticate GKE cluster
+    - name: Get GKE credentials
       run: |
-        kubectl apply -f kubernetes/base/job-deploy.yaml
-        kubectl wait --for=condition=complete job/salesforce-deploy --timeout=600s
-        
+        gcloud container clusters get-credentials jpcluster \
+          --zone us-central1-a \
+          --project grand-forge-472709-a0
+
+    # 4. Apply Salesforce deploy Job
+    - name: Deploy Salesforce Job
+      run: |
+        kubectl apply -f kubernetes/base/job-deploy.yaml -n default
+        kubectl wait --for=condition=complete job/salesforce-deploy -n default --timeout=600s
