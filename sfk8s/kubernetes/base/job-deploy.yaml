@@ -15,14 +15,18 @@ spec:
           - /bin/sh
           - -c
           - |
-            echo "Authorizing org..."
+            echo "Authorizing org with JWT..."
             sf org login jwt \
               --client-id $SF_CLIENT_ID \
               --jwt-key-file /certs/server.key \
               --username $SF_USERNAME \
-              --alias sepsandbox
+              --alias $SF_ALIAS \
+              --instance-url $SF_LOGIN_URL
             echo "Deploying metadata..."
-            sf project deploy start --manifest salesforce/manifest/package.xml --target-org sepsandbox --test-level RunLocalTests
+            sf project deploy start \
+              --manifest salesforce/manifest/package.xml \
+              --target-org $SF_ALIAS \
+              --test-level $SF_TEST_LEVEL
         volumeMounts:
           - name: salesforce-key
             mountPath: /certs

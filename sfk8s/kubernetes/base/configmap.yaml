@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: salesforce-config
+data:
+  SF_LOGIN_URL: "https://orgfarm-ea4276b2f3-dev-ed.develop.my.salesforce.com"
+  SF_ALIAS: "sepsandbox"
+  SF_TEST_LEVEL: "RunLocalTests"
