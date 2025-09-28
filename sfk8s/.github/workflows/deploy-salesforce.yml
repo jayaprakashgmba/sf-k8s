@@ -2,7 +2,8 @@ name: Deploy to Salesforce via Kubernetes
 
 on:
   push:
-    branches: [ "main" ]
+    branches: 
+        - main
 
 jobs:
   deploy:
