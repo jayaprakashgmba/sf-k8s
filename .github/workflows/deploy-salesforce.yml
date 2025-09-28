@@ -15,3 +15,4 @@ jobs:
       run: |
         kubectl apply -f kubernetes/base/job-deploy.yaml
         kubectl wait --for=condition=complete job/salesforce-deploy --timeout=600s
+        
