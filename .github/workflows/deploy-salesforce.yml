@@ -10,51 +10,36 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Checkout repo
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v3
 
-      # Authenticate with GCP
-      - name: Set up GCP credentials
-        uses: google-github-actions/auth@v1
-        with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
-
-      - name: Install gcloud SDK
+      - name: Set up gcloud CLI
         uses: google-github-actions/setup-gcloud@v2
         with:
-          project_id: grand-forge-472709-a0
-          install_components: kubectl
+          project_id: ${{ secrets.GCP_PROJECT }}
+          service_account_key: ${{ secrets.GCP_SA_KEY }}
+          export_default_credentials: true
 
-      # Install GKE auth plugin for kubectl
-      - name: Install GKE Auth Plugin
+      - name: Get GKE credentials
         run: |
-          curl -Lo gke-gcloud-auth-plugin https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/gke-gcloud-auth-plugin
-          chmod +x gke-gcloud-auth-plugin
-          sudo mv gke-gcloud-auth-plugin /usr/local/bin/
+          gcloud container clusters get-credentials jpcluster \
+            --zone us-central1-a \
+            --project ${{ secrets.GCP_PROJECT }}
 
-      # Get cluster credentials
-      - name: Configure kubectl
-        run: gcloud container clusters get-credentials jpcluster --zone us-central1-a --project grand-forge-472709-a0
-
-      # Apply ConfigMap & Secret
-      - name: Apply Salesforce Config
+      - name: Apply ConfigMap and Secret
         run: |
           kubectl apply -f kubernetes/base/configmap.yaml -n default
-          kubectl apply -f kubernetes/base/salesforce-secret.yaml -n default
+          kubectl apply -f kubernetes/base/secret-salesforce.yaml -n default
 
-      # Delete old jobs
       - name: Delete old Salesforce Jobs
         run: |
           kubectl delete jobs -l app=salesforce-deploy --ignore-not-found=true -n default
 
-      # Deploy new Job
-      - name: Deploy Salesforce Job
+      - name: Create new Salesforce Deployment Job
         run: |
           kubectl create -f kubernetes/base/job-deploy.yaml -n default
 
-      # Wait for Job to complete
-      - name: Wait for Salesforce Job
+      - name: Wait for Salesforce Job to complete
         run: |
           JOB_NAME=$(kubectl get jobs -l app=salesforce-deploy -n default -o jsonpath="{.items[0].metadata.name}")
           kubectl wait --for=condition=complete job/$JOB_NAME -n default --timeout=600s
