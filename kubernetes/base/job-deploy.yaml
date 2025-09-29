@@ -4,13 +4,29 @@ metadata:
   generateName: salesforce-deploy-
   namespace: default
 spec:
-  backoffLimit: 0  # Fail immediately without retries
+  backoffLimit: 0
   template:
     metadata:
       labels:
         app: salesforce-deploy
     spec:
       restartPolicy: Never
+      initContainers:
+        - name: wait-for-secret
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              echo "Waiting for Salesforce secret..."
+              while [ ! -f /certs/server.key ]; do
+                sleep 1
+              done
+              echo "Secret found, continuing..."
+          volumeMounts:
+            - name: salesforce-key
+              mountPath: /certs
+              readOnly: true
       containers:
         - name: sf-cli
           image: salesforce/salesforcedx:7.228.0
@@ -19,12 +35,14 @@ spec:
           args:
             - |
               echo "Starting Salesforce Deployment..."
+              echo "Env: SF_ALIAS=$SF_ALIAS, SF_LOGIN_URL=$SF_LOGIN_URL"
               sf project deploy start \
                 --target-org $SF_ALIAS \
                 --jwt-key-file /certs/server.key \
                 --client-id $SF_CLIENT_ID \
-                --test-level RunLocalTests \
-                --json || exit 1
+                --test-level $SF_TEST_LEVEL \
+                --json
+              echo "Deployment finished."
           envFrom:
             - configMapRef:
                 name: salesforce-config
@@ -41,13 +59,3 @@ spec:
             items:
               - key: server.key
                 path: server.key
-      # Automatically capture logs if the job fails
-      initContainers:
-        - name: wait-for-pod
-          image: bitnami/kubectl:1.30
-          command:
-            - sh
-            - -c
-            - |
-              POD_NAME=$(kubectl get pods -l app=salesforce-deploy -n default -o jsonpath="{.items[0].metadata.name}")
-              kubectl logs $POD_NAME -n default
