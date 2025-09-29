@@ -6,30 +6,33 @@ metadata:
 spec:
   backoffLimit: 1
   template:
+    metadata:
+      labels:
+        app: salesforce-deploy
     spec:
       restartPolicy: Never
       containers:
-      - name: sf-cli
-        image: salesforce/salesforcedx:latest
-        command: ["sh", "-c"]
-        args:
-          - |
-            echo "Starting Salesforce Deployment..."
-            sf project deploy start \
-              --target-org $SF_ALIAS \
-              --jwt-key-file /certs/server.key \
-              --client-id $SF_CLIENT_ID \
-              --test-level RunLocalTests \
-              --json
-        envFrom:
-          - configMapRef:
-              name: salesforce-config
-          - secretRef:
-              name: salesforce-secret
-        volumeMounts:
-          - name: salesforce-key
-            mountPath: /certs
-            readOnly: true
+        - name: sf-cli
+          image: salesforce/salesforcedx:latest
+          command: ["sh", "-c"]
+          args:
+            - |
+              echo "Starting Salesforce Deployment..."
+              sf project deploy start \
+                --target-org $SF_ALIAS \
+                --jwt-key-file /certs/server.key \
+                --client-id $SF_CLIENT_ID \
+                --test-level RunLocalTests \
+                --json
+          envFrom:
+            - configMapRef:
+                name: salesforce-config
+            - secretRef:
+                name: salesforce-secret
+          volumeMounts:
+            - name: salesforce-key
+              mountPath: /certs
+              readOnly: true
       volumes:
         - name: salesforce-key
           secret:
