@@ -9,33 +9,47 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
+      # Step 1: Checkout code
       - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Setup GCloud
-        uses: google-github-actions/setup-gcloud@v1
+      # Step 2: Authenticate to GCP
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      # Step 3: Setup gcloud CLI
+      - name: Setup gcloud CLI
+        uses: google-github-actions/setup-gcloud@v2
         with:
           project_id: ${{ secrets.GCP_PROJECT }}
-          service_account_key: ${{ secrets.GCP_SA_KEY }}
+          export_default_credentials: true
 
+      # Step 4: Get GKE credentials
       - name: Get GKE credentials
         run: |
           gcloud container clusters get-credentials jpcluster \
-           --zone us-central1-a \
-           --project ${{ secrets.GCP_PROJECT }}
+            --zone us-central1-a \
+            --project ${{ secrets.GCP_PROJECT }}
+
+      # Step 5: Delete old Salesforce Jobs
       - name: Delete old Salesforce Jobs
         run: |
           kubectl delete jobs -l app=salesforce-deploy --ignore-not-found=true -n default
 
+      # Step 6: Apply ConfigMap & Secret
       - name: Apply ConfigMap & Secret
         run: |
           kubectl apply -f kubernetes/base/configmap.yaml -n default
           kubectl apply -f kubernetes/base/secret-salesforce.yaml -n default
 
+      # Step 7: Create Salesforce Job
       - name: Create Salesforce Job
         run: |
           kubectl create -f kubernetes/base/job-deploy.yaml -n default
 
+      # Step 8: Wait for Salesforce Job completion
       - name: Wait for Salesforce Job
         run: |
           JOB_NAME=$(kubectl get jobs -l app=salesforce-deploy -n default -o jsonpath="{.items[0].metadata.name}")
