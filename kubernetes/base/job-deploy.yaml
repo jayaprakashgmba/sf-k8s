@@ -14,7 +14,7 @@ spec:
       containers:
         - name: sf-cli
           # Pin a stable Salesforce DX image instead of latest
-          image: salesforce/salesforcedx:57.0.0
+          image: salesforce/salesforcedx:7.217.0
           imagePullPolicy: Always
           command: ["sh", "-c"]
           args:
