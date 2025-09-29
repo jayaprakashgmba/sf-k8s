@@ -1,0 +1,14 @@
+# minimal values to enable kube-prometheus-stack with default scraping
+prometheus:
+  prometheusSpec:
+    remoteWrite: []
+grafana:
+  enabled: true
+  adminUser: "admin"
+  adminPassword: "changeme"  # override with Kubernetes secret in production
+alertmanager:
+  enabled: true
+kubeStateMetrics:
+  enabled: true
+nodeExporter:
+  enabled: true

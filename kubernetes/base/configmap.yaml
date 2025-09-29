@@ -6,3 +6,5 @@ data:
   SF_LOGIN_URL: "https://orgfarm-ea4276b2f3-dev-ed.develop.my.salesforce.com"
   SF_ALIAS: "sepsandbox"
   SF_TEST_LEVEL: "RunLocalTests"
+  # Optional: override jwt key file path inside container
+  JWT_KEY_FILE: "/certs/server.key"

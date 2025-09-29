@@ -8,45 +8,95 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      GCP_PROJECT: ${{ secrets.GCP_PROJECT }}
+      GCR_REGISTRY: gcr.io
+      IMAGE_NAME: salesforce-deployer
 
     steps:
-      # 1️⃣ Checkout the repo
       - name: Checkout
         uses: actions/checkout@v3
 
-      # 2️⃣ Authenticate with Google Cloud
       - name: Authenticate to GCP
         uses: google-github-actions/auth@v1
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
 
-      # 3️⃣ Get GKE credentials (auto-installs gke-gcloud-auth-plugin)
-      - name: Get GKE credentials
+      - name: Configure gcloud (install components)
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ secrets.GCP_PROJECT }}
+          install_components: kubectl
+
+      - name: Configure Docker for GCR
+        run: |
+          gcloud auth configure-docker --quiet
+
+      - name: Build and push Docker image to GCR
+        uses: docker/build-push-action@v4
+        with:
+          context: ./docker
+          push: true
+          tags: ${{ env.GCR_REGISTRY }}/${{ env.GCP_PROJECT }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+
+      - name: Install helm (for monitoring)
+        uses: azure/setup-helm@v3
+        with:
+          version: '3.11.2'
+
+      - name: Get GKE credentials (auto installs auth plugin)
         uses: google-github-actions/get-gke-credentials@v3
         with:
           cluster_name: jpcluster
-          location: us-central1-a          # e.g., us-central1-a
+          location: us-central1-a      # <--- replace if different
           credentials: ${{ secrets.GCP_SA_KEY }}
 
-      # 4️⃣ Delete old Salesforce jobs
-      - name: Delete old Salesforce Jobs
+      - name: Ensure monitoring (Prometheus + Grafana) is installed
         run: |
-          kubectl delete jobs -l app=salesforce-deploy --ignore-not-found=true -n default
+          helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+          helm repo add grafana https://grafana.github.io/helm-charts
+          helm repo update
+          helm upgrade --install monitoring prometheus-community/kube-prometheus-stack \
+            -n monitoring --create-namespace \
+            -f kubernetes/helm/monitoring/values.yaml
 
-      # 5️⃣ Apply ConfigMap & Secret
-      - name: Apply ConfigMap & Secret
+      - name: Cleanup old salesforce jobs
         run: |
-          kubectl apply -f kubernetes/base/configmap.yaml -n default
-          kubectl apply -f kubernetes/base/secret-salesforce.yaml -n default
+          kubectl delete jobs -l app=salesforce-deploy --ignore-not-found=true -n default || true
 
-      # 6️⃣ Create Salesforce Deployment Job
-      - name: Create Salesforce Job
+      - name: Create salesforce-secret from GitHub secrets
         run: |
-          kubectl create -f kubernetes/base/job-deploy.yaml -n default
+          # write server.key from secret to file (preserves newlines)
+          printf '%s\n' "${{ secrets.SF_SERVER_KEY }}" > server.key
+          kubectl create secret generic salesforce-secret \
+            --from-file=server.key=server.key \
+            --from-literal=SF_CLIENT_ID="${{ secrets.SF_CLIENT_ID }}" \
+            --from-literal=SF_USERNAME="${{ secrets.SF_USERNAME }}" \
+            -n default --dry-run=client -o yaml | kubectl apply -f -
 
-      # 7️⃣ Wait for Salesforce Job completion
-      - name: Wait for Salesforce Job
+      - name: Render job manifest and create Job
+        env:
+          IMAGE: ${{ env.GCR_REGISTRY }}/${{ env.GCP_PROJECT }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
         run: |
+          # install envsubst if needed
+          sudo apt-get update && sudo apt-get install -y gettext-base >/dev/null
+          envsubst < kubernetes/base/job-deploy.yaml | kubectl create -f - -n default
+
+      - name: Wait for Job completion (and fetch logs on failure)
+        run: |
+          set -e
           JOB_NAME=$(kubectl get jobs -l app=salesforce-deploy -n default -o jsonpath="{.items[0].metadata.name}")
           echo "Waiting for job: $JOB_NAME"
-          kubectl wait --for=condition=complete job/$JOB_NAME -n default --timeout=600s
+          if kubectl wait --for=condition=complete job/$JOB_NAME -n default --timeout=900s; then
+            echo "Job completed successfully"
+            POD=$(kubectl get pods -l job-name=$JOB_NAME -n default -o jsonpath="{.items[0].metadata.name}")
+            kubectl logs $POD -n default
+          else
+            echo "Job failed or timed out - printing pod & job details"
+            kubectl describe job $JOB_NAME -n default || true
+            kubectl get pods -l job-name=$JOB_NAME -n default -o wide || true
+            POD=$(kubectl get pods -l job-name=$JOB_NAME -n default -o jsonpath="{.items[0].metadata.name}")
+            kubectl describe pod $POD -n default || true
+            kubectl logs $POD -n default || true
+            exit 1
+          fi
