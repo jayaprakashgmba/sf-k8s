@@ -1,21 +1,15 @@
-# Use a small Node base so sfdx (npm) works
 FROM node:18-bullseye-slim
 
-# Install utilities
+# Install dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     git ca-certificates curl unzip bash \
-  && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/*
 
-# Install Salesforce CLI (npm package)
+# Install Salesforce CLI
 RUN npm install -g @salesforce/cli@latest
 
-# Create app user
-RUN useradd --create-home appuser
-WORKDIR /home/appuser
-USER appuser
+WORKDIR /app
 
-# copy entrypoint and make executable
-COPY entrypoint.sh /home/appuser/entrypoint.sh
-RUN chmod +x /home/appuser/entrypoint.sh
+# Default entrypoint to sf
+ENTRYPOINT ["sf"]
 
-ENTRYPOINT ["/home/appuser/entrypoint.sh"]
