@@ -37,10 +37,12 @@ jobs:
 
       # Step 4: Get GKE credentials
       - name: Get GKE credentials
-        run: |
-          gcloud container clusters get-credentials jpcluster \
-            --zone us-central1-a \
-            --project ${{ secrets.GCP_PROJECT }}
+        uses: google-github-actions/get-gke-credentials@v3
+        with:
+            cluster_name: jpcluster
+            location: YOUR_ZONE
+            credentials: ${{ secrets.GCP_SA_KEY }}
+
 
       # Step 5: Delete old Salesforce Jobs
       - name: Delete old Salesforce Jobs
