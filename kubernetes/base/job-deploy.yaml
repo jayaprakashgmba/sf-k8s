@@ -2,39 +2,15 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   name: salesforce-deploy
+  namespace: default
 spec:
+  backoffLimit: 1
   template:
     spec:
       containers:
       - name: sf-cli
-        image: ghcr.io/salesforce/sfdx:latest
-        env:
-          - name: SF_USERNAME
-            valueFrom:
-              secretKeyRef:
-                name: salesforce-secret
-                key: SF_USERNAME
-          - name: SF_CLIENT_ID
-            valueFrom:
-              secretKeyRef:
-                name: salesforce-secret
-                key: SF_CLIENT_ID
-          - name: SF_LOGIN_URL
-            valueFrom:
-              configMapKeyRef:
-                name: salesforce-config
-                key: SF_LOGIN_URL
-          - name: SF_ALIAS
-            valueFrom:
-              configMapKeyRef:
-                name: salesforce-config
-                key: SF_ALIAS
-          - name: SF_TEST_LEVEL
-            valueFrom:
-              configMapKeyRef:
-                name: salesforce-config
-                key: SF_TEST_LEVEL
-        command: ["/bin/sh", "-c"]
+        image: salesforce/salesforcedx:latest   # ✅ Public Salesforce CLI image
+        command: ["sh", "-c"]
         args:
           - |
             echo "Starting Salesforce Deployment..."
@@ -42,9 +18,13 @@ spec:
               --target-org $SF_ALIAS \
               --jwt-key-file /certs/server.key \
               --client-id $SF_CLIENT_ID \
-              --test-level $SF_TEST_LEVEL \
+              --test-level RunLocalTests \
               --json
-            echo "Deployment completed."
+        envFrom:
+          - configMapRef:
+              name: salesforce-config
+          - secretRef:
+              name: salesforce-secret
         volumeMounts:
           - name: salesforce-key
             mountPath: /certs
@@ -54,4 +34,3 @@ spec:
         - name: salesforce-key
           secret:
             secretName: salesforce-key
-  backoffLimit: 0
