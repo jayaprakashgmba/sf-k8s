@@ -23,7 +23,6 @@ jobs:
           gcloud container clusters get-credentials jpcluster \
            --zone us-central1-a \
            --project ${{ secrets.GCP_PROJECT }}
-
       - name: Delete old Salesforce Jobs
         run: |
           kubectl delete jobs -l app=salesforce-deploy --ignore-not-found=true -n default
