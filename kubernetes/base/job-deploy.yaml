@@ -13,9 +13,9 @@ spec:
       restartPolicy: Never
       containers:
         - name: sf-cli
-          # Pin a stable Salesforce DX image instead of latest
-          image: salesforce/salesforcedx:7.217.0
-          imagePullPolicy: Always
+          # Pin to a stable Salesforce DX image
+          image: salesforce/salesforcedx:55.0.0
+          imagePullPolicy: IfNotPresent
           command: ["sh", "-c"]
           args:
             - |
