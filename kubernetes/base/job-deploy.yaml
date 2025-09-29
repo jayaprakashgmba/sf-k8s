@@ -1,10 +1,10 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: salesforce-deploy
+  generateName: salesforce-deploy-
   namespace: default
 spec:
-  backoffLimit: 1
+  backoffLimit: 0
   template:
     metadata:
       labels:
@@ -14,6 +14,7 @@ spec:
       containers:
         - name: sf-cli
           image: salesforce/salesforcedx:latest
+          imagePullPolicy: Always
           command: ["sh", "-c"]
           args:
             - |
@@ -36,4 +37,7 @@ spec:
       volumes:
         - name: salesforce-key
           secret:
-            secretName: salesforce-key
+            secretName: salesforce-secret
+            items:
+              - key: server.key
+                path: server.key
