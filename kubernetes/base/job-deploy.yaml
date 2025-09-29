@@ -4,7 +4,7 @@ metadata:
   generateName: salesforce-deploy-
   namespace: default
 spec:
-  backoffLimit: 0
+  backoffLimit: 0  # Fail immediately without retries
   template:
     metadata:
       labels:
@@ -24,7 +24,7 @@ spec:
                 --jwt-key-file /certs/server.key \
                 --client-id $SF_CLIENT_ID \
                 --test-level RunLocalTests \
-                --json
+                --json || exit 1
           envFrom:
             - configMapRef:
                 name: salesforce-config
@@ -41,3 +41,13 @@ spec:
             items:
               - key: server.key
                 path: server.key
+      # Automatically capture logs if the job fails
+      initContainers:
+        - name: wait-for-pod
+          image: bitnami/kubectl:1.30
+          command:
+            - sh
+            - -c
+            - |
+              POD_NAME=$(kubectl get pods -l app=salesforce-deploy -n default -o jsonpath="{.items[0].metadata.name}")
+              kubectl logs $POD_NAME -n default

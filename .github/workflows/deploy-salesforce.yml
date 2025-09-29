@@ -8,60 +8,45 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     steps:
-      # Step 1: Checkout code
+      # 1️⃣ Checkout the repo
       - name: Checkout
         uses: actions/checkout@v3
 
-      # Step 2: Authenticate to GCP
+      # 2️⃣ Authenticate with Google Cloud
       - name: Authenticate to GCP
         uses: google-github-actions/auth@v1
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
 
-      # Step 3: Setup gcloud CLI
-      - name: Setup gcloud CLI
-        uses: google-github-actions/setup-gcloud@v2
-        with:
-          project_id: ${{ secrets.GCP_PROJECT }}
-          export_default_credentials: true
-      - name: Install GKE Auth Plugin
-        run: |
-         sudo apt-get update
-         sudo apt-get install -y google-cloud-sdk-gke-gcloud-auth-plugin
-         gcloud components install gke-gcloud-auth-plugin
-
-      - name: Set KUBECTL auth plugin
-        run: |
-            export USE_GKE_GCLOUD_AUTH_PLUGIN=True
-
-      # Step 4: Get GKE credentials
+      # 3️⃣ Get GKE credentials (auto-installs gke-gcloud-auth-plugin)
       - name: Get GKE credentials
         uses: google-github-actions/get-gke-credentials@v3
         with:
-            cluster_name: jpcluster
-            location: us-central1-a
-            credentials: ${{ secrets.GCP_SA_KEY }}
+          cluster_name: jpcluster
+          location: us-central1-a          # e.g., us-central1-a
+          credentials: ${{ secrets.GCP_SA_KEY }}
 
-
-      # Step 5: Delete old Salesforce Jobs
+      # 4️⃣ Delete old Salesforce jobs
       - name: Delete old Salesforce Jobs
         run: |
           kubectl delete jobs -l app=salesforce-deploy --ignore-not-found=true -n default
 
-      # Step 6: Apply ConfigMap & Secret
+      # 5️⃣ Apply ConfigMap & Secret
       - name: Apply ConfigMap & Secret
         run: |
           kubectl apply -f kubernetes/base/configmap.yaml -n default
           kubectl apply -f kubernetes/base/secret-salesforce.yaml -n default
 
-      # Step 7: Create Salesforce Job
+      # 6️⃣ Create Salesforce Deployment Job
       - name: Create Salesforce Job
         run: |
           kubectl create -f kubernetes/base/job-deploy.yaml -n default
 
-      # Step 8: Wait for Salesforce Job completion
+      # 7️⃣ Wait for Salesforce Job completion
       - name: Wait for Salesforce Job
         run: |
           JOB_NAME=$(kubectl get jobs -l app=salesforce-deploy -n default -o jsonpath="{.items[0].metadata.name}")
+          echo "Waiting for job: $JOB_NAME"
           kubectl wait --for=condition=complete job/$JOB_NAME -n default --timeout=600s
