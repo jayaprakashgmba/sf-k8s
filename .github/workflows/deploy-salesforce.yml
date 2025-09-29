@@ -21,8 +21,8 @@ jobs:
       - name: Get GKE credentials
         run: |
           gcloud container clusters get-credentials jpcluster \
-            --zone us-central1-a \
-            --project ${{ secrets.GCP_PROJECT }}
+           --zone us-central1-a \
+           --project ${{ secrets.GCP_PROJECT }}
 
       - name: Delete old Salesforce Jobs
         run: |
