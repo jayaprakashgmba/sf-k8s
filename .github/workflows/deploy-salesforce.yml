@@ -56,7 +56,7 @@ jobs:
           IMAGE_TAG: jayaprakashitc/salesforce-deployer:latest
         run: |
           echo "Deploying Salesforce Job..."
-          envsubst '${IMAGE_TAG}' < kubernetes/base/job-deploy.yaml | kubectl apply -f -
+          envsubst '${IMAGE_TAG}' < kubernetes/base/job-deploy.yaml | kubectl create -f -
 
       # 8️⃣ Wait for Job to complete
       - name: Wait for Salesforce Job completion
