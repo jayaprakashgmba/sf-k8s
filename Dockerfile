@@ -18,6 +18,8 @@ RUN chmod +x /app/entrypoint.sh
 COPY manifest /app/manifest
 
 # Copy server.key
+COPY force-app /app/force-app
+COPY sfdx-project.json /app/sfdx-project.json
 COPY server.key /app/server.key
 
 ENTRYPOINT ["/app/entrypoint.sh"]
