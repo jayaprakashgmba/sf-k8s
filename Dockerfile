@@ -1,25 +1,29 @@
+# Base image with Node.js
 FROM node:18-slim
 
-# Install dependencies
+# Install dependencies for Salesforce CLI
 RUN apt-get update && apt-get install -y \
-    wget jq unzip git openssl \
+    wget \
+    unzip \
+    git \
+    openssl \
+    jq \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Salesforce CLI
+# Install Salesforce CLI globally
 RUN npm install --global @salesforce/cli
 
+# Set working directory
 WORKDIR /app
 
-# Copy entrypoint script
+# Copy deployment scripts
 COPY entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 
-# Copy manifest folder
+# Copy Salesforce project files
 COPY manifest /app/manifest
-
-# Copy server.key
 COPY force-app /app/force-app
 COPY sfdx-project.json /app/sfdx-project.json
-COPY server.key /app/server.key
 
+# Entrypoint
 ENTRYPOINT ["/app/entrypoint.sh"]

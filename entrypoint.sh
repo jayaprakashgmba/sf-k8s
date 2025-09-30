@@ -27,4 +27,4 @@ sf project deploy start \
   --wait 10 \
   --verbose
 
-echo "Salesforce deployment finished!
+echo "Salesforce deployment finished!"
