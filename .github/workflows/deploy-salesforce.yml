@@ -10,18 +10,18 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout repository
-      - name: Checkout code
+      # 1️⃣ Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v3
 
-      # 2️⃣ Log in to Docker Hub
+      # 2️⃣ Docker login
       - name: Docker Hub Login
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # 3️⃣ Build & push Salesforce Deployer Docker image
+      # 3️⃣ Build & push Docker image
       - name: Build & Push Salesforce Deployer Image
         uses: docker/build-push-action@v4
         with:
@@ -36,7 +36,7 @@ jobs:
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
 
-      # 5️⃣ Get GKE cluster credentials
+      # 5️⃣ Get GKE credentials
       - name: Get GKE Credentials
         uses: google-github-actions/get-gke-credentials@v2
         with:
@@ -45,22 +45,21 @@ jobs:
           project_id: ${{ secrets.GCP_PROJECT }}
 
       # 6️⃣ Apply ConfigMap & Secret in Kubernetes
-      - name: Apply Salesforce ConfigMap
+      - name: Apply Kubernetes ConfigMap and Secret
         run: |
-          kubectl apply -f kubernetes/base/configmap.yml
-          kubectl apply -f kubernetes/base/secrets-salesforce.yml
+          kubectl apply -f kubernetes/base/configmap.yaml
+          kubectl apply -f kubernetes/base/secret-salesforce.yaml
 
-      # 7️⃣ Deploy Salesforce Job to Kubernetes
+      # 7️⃣ Deploy Salesforce Job
       - name: Deploy Salesforce Job
         env:
           IMAGE_TAG: jayaprakashitc/salesforce-deployer:latest
         run: |
           echo "Deploying Salesforce Job..."
-          # Replace only IMAGE_TAG in Job YAML
-          envsubst '${IMAGE_TAG}' < kubernetes/base/job-deploy.yml | kubectl apply -f -
+          envsubst '${IMAGE_TAG}' < kubernetes/base/job-deploy.yaml | kubectl apply -f -
 
-      # 8️⃣ Optional: Wait for Job completion
-      - name: Wait for Salesforce Job to finish
+      # 8️⃣ Wait for Job to complete
+      - name: Wait for Salesforce Job completion
         run: |
           JOB_NAME=$(kubectl get jobs -n default -o jsonpath='{.items[-1:].metadata.name}')
           echo "Waiting for job $JOB_NAME to complete..."
