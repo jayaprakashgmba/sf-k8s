@@ -8,6 +8,7 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+
     steps:
       # 1️⃣ Checkout repository
       - name: Checkout code
@@ -17,10 +18,10 @@ jobs:
       - name: Docker Hub Login
         uses: docker/login-action@v2
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}  # jayaprakashitc
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # 3️⃣ Build & push Docker image
+      # 3️⃣ Build & push Salesforce Deployer Docker image
       - name: Build & Push Salesforce Deployer Image
         uses: docker/build-push-action@v4
         with:
@@ -43,10 +44,24 @@ jobs:
           location: ${{ secrets.GKE_CLUSTER_ZONE }}
           project_id: ${{ secrets.GCP_PROJECT }}
 
-      # 6️⃣ Deploy Salesforce Job to Kubernetes using envsubst
+      # 6️⃣ Apply ConfigMap & Secret in Kubernetes
+      - name: Apply Salesforce ConfigMap
+        run: |
+          kubectl apply -f kubernetes/base/configmap.yml
+          kubectl apply -f kubernetes/base/secrets-salesforce.yml
+
+      # 7️⃣ Deploy Salesforce Job to Kubernetes
       - name: Deploy Salesforce Job
         env:
           IMAGE_TAG: jayaprakashitc/salesforce-deployer:latest
         run: |
-          echo "Replacing image placeholder and deploying Job..."
-          envsubst < kubernetes/base/job-deploy.yaml | kubectl create -f -
+          echo "Deploying Salesforce Job..."
+          # Replace only IMAGE_TAG in Job YAML
+          envsubst '${IMAGE_TAG}' < kubernetes/base/job-deploy.yml | kubectl apply -f -
+
+      # 8️⃣ Optional: Wait for Job completion
+      - name: Wait for Salesforce Job to finish
+        run: |
+          JOB_NAME=$(kubectl get jobs -n default -o jsonpath='{.items[-1:].metadata.name}')
+          echo "Waiting for job $JOB_NAME to complete..."
+          kubectl wait --for=condition=complete --timeout=600s job/$JOB_NAME -n default
