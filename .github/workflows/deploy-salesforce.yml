@@ -30,10 +30,10 @@ jobs:
       - name: Build & push Docker image
         uses: docker/build-push-action@v4
         with:
-          context: ./docker
-          file: ./docker/Dockerfile
+          context: .
+          file: ./Dockerfile
           push: true
-          tags: gcr.io/${{ secrets.GCP_PROJECT }}/salesforce-deployer:${{ github.sha }}
+          tags: jayaprakash/salesforce-deployer:latest
 
   deploy:
     runs-on: ubuntu-latest
