@@ -7,4 +7,4 @@ data:
   SF_ALIAS: "sepsandbox"
   SF_TEST_LEVEL: "RunLocalTests"
   # Optional: override jwt key file path inside container
-  JWT_KEY_FILE: "/certs/server.key"
+  JWT_KEY_FILE: "/Users/gjayaprakash/Desktop/sf-k8s/server.key"

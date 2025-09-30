@@ -1,19 +1,31 @@
-#!/usr/bin/env bash
-set -euo pipefail
+#!/bin/bash
+set -e
 
-# Print env for debugging (won't show secrets)
-echo "Starting container. SF_ALIAS=${SF_ALIAS:-<none>}"
+echo "Starting Salesforce deployment..."
 
-# Fail early if key not found
-if [ ! -f "${JWT_KEY_FILE:-/certs/server.key}" ]; then
-  echo "ERROR: JWT key file not found at ${JWT_KEY_FILE:-/certs/server.key}"
-  exit 2
-fi
+# Read env vars (from Kubernetes Secret/ConfigMap)
+SF_USERNAME=${SF_USERNAME}
+SF_CLIENT_ID=${SF_CLIENT_ID}
+SF_SERVER_KEY_PATH=${SF_SERVER_KEY_PATH:-/certs/server.key}
+SF_ALIAS=${SF_ALIAS:-Sandbox}
+SF_TEST_LEVEL=${SF_TEST_LEVEL:-RunLocalTests}
+TEST_CLASSES=${TEST_CLASSES}
 
-# Run the sfdx deploy command
+# Authenticate via JWT
+sf org login jwt \
+  --username "$SF_USERNAME" \
+  --client-id "$SF_CLIENT_ID" \
+  --jwt-key-file "$SF_SERVER_KEY_PATH" \
+  --alias "$SF_ALIAS" \
+  --instance-url https://test.salesforce.com
+
+# Deploy package
 sf project deploy start \
-  --target-org "${SF_ALIAS:-sepsandbox}" \
-  --jwt-key-file "${JWT_KEY_FILE:-/certs/server.key}" \
-  --client-id "${SF_CLIENT_ID}" \
-  --test-level "${SF_TEST_LEVEL:-RunLocalTests}" \
-  --json
+  --manifest ./manifest/package.xml \
+  --target-org "$SF_ALIAS" \
+  --test-level "$SF_TEST_LEVEL" \
+  ${TEST_CLASSES:+--tests "$TEST_CLASSES"} \
+  --wait 10 \
+  --verbose
+
+echo "Deployment finished!"

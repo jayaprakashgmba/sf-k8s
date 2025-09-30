@@ -15,17 +15,6 @@ spec:
         - name: sf-cli
           image: ${IMAGE}
           imagePullPolicy: IfNotPresent
-          command: ["sh", "-c"]
-          args:
-            - |
-              echo "Starting Salesforce Deployment..."
-              echo "SF_ALIAS=${SF_ALIAS} SF_CLIENT_ID=${SF_CLIENT_ID:0:6}..." # partial for debug
-              sf project deploy start \
-                --target-org $SF_ALIAS \
-                --jwt-key-file ${JWT_KEY_FILE:-/certs/server.key} \
-                --client-id $SF_CLIENT_ID \
-                --test-level $SF_TEST_LEVEL \
-                --json || ( echo "sf deploy failed" && exit 1 )
           envFrom:
             - configMapRef:
                 name: salesforce-config

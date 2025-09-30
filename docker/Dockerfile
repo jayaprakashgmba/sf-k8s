@@ -1,15 +1,24 @@
-FROM node:18-bullseye-slim
+# Base image with Node.js
+FROM node:18-slim
 
-# Install dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    git ca-certificates curl unzip bash \
+# Install dependencies for Salesforce CLI
+RUN apt-get update && apt-get install -y \
+    wget \
+    jq \
+    unzip \
+    git \
+    openssl \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Salesforce CLI
-RUN npm install -g @salesforce/cli@latest
+# Install Salesforce CLI (sf)
+RUN npm install --global @salesforce/cli
 
+# Set working directory
 WORKDIR /app
 
-# Default entrypoint to sf
-ENTRYPOINT ["sf"]
+# Copy deployment script
+COPY deploy.sh /app/deploy.sh
+RUN chmod +x /app/deploy.sh
 
+# Default entrypoint
+ENTRYPOINT ["/app/deploy.sh"]

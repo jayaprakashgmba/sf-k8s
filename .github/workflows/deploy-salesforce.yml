@@ -12,7 +12,7 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v3
 
-      # Authenticate to Google Cloud (before Docker push!)
+      # Authenticate to Google Cloud
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
@@ -23,7 +23,6 @@ jobs:
         with:
           project_id: ${{ secrets.GCP_PROJECT }}
 
-      # Configure docker to use gcloud creds for GCR
       - name: Configure Docker auth for GCR
         run: gcloud auth configure-docker --quiet
 
@@ -31,7 +30,7 @@ jobs:
       - name: Build & push Docker image
         uses: docker/build-push-action@v4
         with:
-          context: ./docker
+          context: .
           push: true
           tags: gcr.io/${{ secrets.GCP_PROJECT }}/salesforce-deployer:${{ github.sha }}
 
@@ -42,15 +41,6 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v3
 
-      # Run Salesforce deploy using Docker image
-      - name: Run Salesforce Deployment
+      - name: Apply Kubernetes Job
         run: |
-          docker run --rm \
-            -v ${{ github.workspace }}:/app \
-            gcr.io/${{ secrets.GCP_PROJECT }}/salesforce-deployer:${{ github.sha }} \
-            project deploy start \
-              --manifest /app/manifest/package.xml \
-              --target-org ${{ secrets.SF_AUTH_URL }} \
-              --test-level RunLocalTests \
-              --json
-
+          sed "s|\${IMAGE}|gcr.io/${{ secrets.GCP_PROJECT }}/salesforce-deployer:${{ github.sha }}|" k8s/job-deploy.yml | kubectl apply -f -
