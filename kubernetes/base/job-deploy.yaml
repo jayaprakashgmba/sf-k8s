@@ -13,40 +13,48 @@ spec:
       restartPolicy: Never
       containers:
         - name: sf-cli
-          image: jayaprakashitc/salesforce-deployer
-          env:
-            - name: SF_USERNAME
-              valueFrom:
-                secretKeyRef:
-                  name: salesforce-secrets
-                  key: SF_USERNAME
-            - name: SF_CLIENT_ID
-              valueFrom:
-                secretKeyRef:
-                  name: salesforce-secrets
-                  key: SF_CLIENT_ID
-            - name: SF_ALIAS
-              valueFrom:
-                secretKeyRef:
-                  name: salesforce-secrets
-                  key: SF_ALIAS
-            - name: SF_LOGIN_URL
-              valueFrom:
-                secretKeyRef:
-                  name: salesforce-secrets
-                  key: SF_LOGIN_URL
-            - name: SF_TEST_LEVEL
-              value: "RunLocalTests"
-            - name: TEST_CLASSES
-              valueFrom:
-                configMapKeyRef:
-                  name: salesforce-test-classes
-                  key: TEST_CLASSES
+          image: ${IMAGE_TAG}  # replaced via envsubst in GitHub Actions
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              echo "Starting Salesforce deployment..."
+              echo "SF_USERNAME=$SF_USERNAME"
+              echo "SF_CLIENT_ID=$SF_CLIENT_ID"
+              echo "SF_ALIAS=$SF_ALIAS"
+              echo "SF_LOGIN_URL=$SF_LOGIN_URL"
+              ls -l /certs/server.key
+
+              # JWT login
+              sf org login jwt \
+                --username "$SF_USERNAME" \
+                --client-id "$SF_CLIENT_ID" \
+                --jwt-key-file /certs/server.key \
+                --alias "$SF_ALIAS" \
+                --instance-url "$SF_LOGIN_URL"
+
+              # Deploy package
+              sf project deploy start \
+                --manifest /app/manifest/package.xml \
+                --target-org "$SF_ALIAS" \
+                --test-level "$SF_TEST_LEVEL" \
+                --tests $TEST_CLASSES \
+                --wait 10 \
+                --verbose
+              echo "Deployment finished!"
+          envFrom:
+            - secretRef:
+                name: salesforce-secret          # contains SF_USERNAME, SF_CLIENT_ID
+            - configMapRef:
+                name: salesforce-test-classes    # contains TEST_CLASSES
           volumeMounts:
             - name: salesforce-key
-              mountPath: /app/server.key
-              subPath: server.key
+              mountPath: /certs
+              readOnly: true
       volumes:
         - name: salesforce-key
           secret:
-            secretName: salesforce-key
+            secretName: salesforce-key           # contains server.key
+            items:
+              - key: server.key
+                path: server.key
