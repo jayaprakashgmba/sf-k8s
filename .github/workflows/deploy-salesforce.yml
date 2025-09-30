@@ -36,7 +36,17 @@ jobs:
         run: |
           mkdir -p $HOME/.kube
           echo "${{ secrets.KUBECONFIG_DATA }}" | base64 --decode > $HOME/.kube/config
-      
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+         credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Get GKE credentials
+        uses: google-github-actions/get-gke-credentials@v2
+        with:
+         cluster_name: jpcluster
+         location: us-central1-a
+         project_id: grand-forge-472709-a0
       - name: Deploy Salesforce Job to Kubernetes
         run: |
          sed "s|\${IMAGE}|${IMAGE_TAG}|" kubernetes/base/job-deploy.yaml | kubectl apply -f -
