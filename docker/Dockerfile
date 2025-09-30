@@ -22,3 +22,4 @@ RUN chmod +x /app/deploy.sh
 
 # Default entrypoint
 ENTRYPOINT ["/docker/deploy.sh"]
+ 
