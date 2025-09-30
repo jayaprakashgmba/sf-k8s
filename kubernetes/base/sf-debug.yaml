@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: sf-debug
+spec:
+  containers:
+    - name: sf-cli
+      image: salesforce-deployer
+      command: ["sleep", "3600"]
+  restartPolicy: Never
