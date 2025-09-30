@@ -13,8 +13,26 @@ spec:
       restartPolicy: Never
       containers:
         - name: sf-cli
-          image: ${IMAGE}
+          image: ${IMAGE_TAG}         # ✅ This will be replaced by envsubst
           imagePullPolicy: IfNotPresent
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              echo "Starting Salesforce deployment..."
+              sf org login jwt \
+                --username "$SF_USERNAME" \
+                --client-id "$SF_CLIENT_ID" \
+                --jwt-key-file /certs/server.key \
+                --alias Sandbox \
+                --instance-url https://test.salesforce.com
+              sf project deploy start \
+                --manifest ./manifest/package.xml \
+                --target-org Sandbox \
+                --test-level RunSpecifiedTests \
+                --tests "$TEST_CLASSES" \
+                --wait 10 \
+                --verbose
+              echo "Deployment finished!"
           envFrom:
             - configMapRef:
                 name: salesforce-config
