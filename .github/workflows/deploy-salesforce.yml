@@ -47,6 +47,6 @@ jobs:
          cluster_name: jpcluster
          location: us-central1-a
          project_id: grand-forge-472709-a0
-      - name: Deploy Salesforce Job to Kubernetes
+      - name: Deploy Salesforce Job
         run: |
-         sed "s|\${IMAGE}|${IMAGE_TAG}|" kubernetes/base/job-deploy.yaml | kubectl apply -f -
+          sed "s|\$***IMAGE***|$***IMAGE_TAG***|" kubernetes/base/job-deploy.yaml | kubectl create -f -
