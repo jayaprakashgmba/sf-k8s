@@ -21,7 +21,7 @@ COPY entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 
 # Copy Salesforce project files
-COPY manifest /app/manifest/package.xml
+COPY manifest /app/manifest
 COPY force-app /app/force-app
 COPY sfdx-project.json /app/sfdx-project.json
 
