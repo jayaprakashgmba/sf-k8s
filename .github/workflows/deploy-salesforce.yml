@@ -30,7 +30,7 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-          
+
       # Build & push Docker image
       - name: Build & push Docker image
         uses: docker/build-push-action@v4
@@ -38,7 +38,7 @@ jobs:
           context: .
           file: ./Dockerfile
           push: true
-          tags: jayaprakash/salesforce-deployer:latest
+          tags: jayaprakashitc/salesforce-deployer:latest
 
   deploy:
     runs-on: ubuntu-latest
