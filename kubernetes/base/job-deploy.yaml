@@ -35,6 +35,7 @@ spec:
 
               # Deploy package
               sf project deploy start \
+                --project-dir /app \
                 --manifest ./manifest/package.xml \
                 --target-org "$SF_ALIAS" \
                 --test-level "$SF_TEST_LEVEL" \
