@@ -13,48 +13,40 @@ spec:
       restartPolicy: Never
       containers:
         - name: sf-cli
-          image: ${IMAGE_TAG}  # replaced by envsubst in GitHub Actions
-          imagePullPolicy: IfNotPresent
-          command: ["/bin/sh", "-c"]
-          args:
-            - |
-              echo "Starting Salesforce deployment..."
-              echo "SF_USERNAME=$SF_USERNAME"
-              echo "SF_CLIENT_ID=$SF_CLIENT_ID"
-              echo "SF_ALIAS=$SF_ALIAS"
-              echo "SF_LOGIN_URL=$SF_LOGIN_URL"
-              ls -l /certs/server.key
-              
-              # JWT login
-              sf org login jwt \
-                --username "$SF_USERNAME" \
-                --client-id "$SF_CLIENT_ID" \
-                --jwt-key-file /certs/server.key \
-                --alias "$SF_ALIAS" \
-                --instance-url "$SF_LOGIN_URL"
-
-              # Deploy package
-              sf project deploy start \
-                --manifest ./manifest/package.xml \
-                --target-org "$SF_ALIAS" \
-                --test-level "$SF_TEST_LEVEL" \
-                --tests "$TEST_CLASSES" \
-                --wait 10 \
-                --verbose
-              echo "Deployment finished!"
-          envFrom:
-            - configMapRef:
-                name: salesforce-config
-            - secretRef:
-                name: salesforce-secret
+          image: your-registry/salesforce-deployer:latest
+          env:
+            - name: SF_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: salesforce-secrets
+                  key: SF_USERNAME
+            - name: SF_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: salesforce-secrets
+                  key: SF_CLIENT_ID
+            - name: SF_ALIAS
+              valueFrom:
+                secretKeyRef:
+                  name: salesforce-secrets
+                  key: SF_ALIAS
+            - name: SF_LOGIN_URL
+              valueFrom:
+                secretKeyRef:
+                  name: salesforce-secrets
+                  key: SF_LOGIN_URL
+            - name: SF_TEST_LEVEL
+              value: "RunLocalTests"
+            - name: TEST_CLASSES
+              valueFrom:
+                configMapKeyRef:
+                  name: salesforce-test-classes
+                  key: TEST_CLASSES
           volumeMounts:
             - name: salesforce-key
-              mountPath: /certs
-              readOnly: true
+              mountPath: /app/server.key
+              subPath: server.key
       volumes:
         - name: salesforce-key
           secret:
-            secretName: salesforce-secret
-            items:
-              - key: server.key
-                path: server.key
+            secretName: salesforce-key
