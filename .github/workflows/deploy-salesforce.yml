@@ -9,19 +9,19 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     steps:
-      # 1️⃣ Checkout code
+      # 1️⃣ Checkout repo
       - name: Checkout repository
         uses: actions/checkout@v3
 
       # 2️⃣ Log in to Docker Hub
-      - name: Log in to Docker Hub
+      - name: Docker Hub Login
         uses: docker/login-action@v2
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }} # jayaprakashitc
+          username: ${{ secrets.DOCKERHUB_USERNAME }}  # jayaprakashitc
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # 3️⃣ Build & push Docker image
-      - name: Build & Push Docker Image
+      # 3️⃣ Build & Push Docker image
+      - name: Build & Push Salesforce Deployer Image
         uses: docker/build-push-action@v4
         with:
           context: .
@@ -29,24 +29,24 @@ jobs:
           push: true
           tags: jayaprakashitc/salesforce-deployer:latest
 
-      # 4️⃣ Set Docker image variable
-      - name: Set IMAGE variable
-        run: echo "IMAGE_TAG=jayaprakashitc/salesforce-deployer:latest" >> $GITHUB_ENV
-      - name: Setup kubeconfig
-        run: |
-          mkdir -p $HOME/.kube
-          echo "${{ secrets.KUBECONFIG_DATA }}" | base64 --decode > $HOME/.kube/config
-      - name: Authenticate to GCP
+      # 4️⃣ Authenticate to GCP
+      - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
-         credentials_json: ${{ secrets.GCP_SA_KEY }}
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
 
-      - name: Get GKE credentials
+      # 5️⃣ Get GKE cluster credentials
+      - name: Get GKE Credentials
         uses: google-github-actions/get-gke-credentials@v2
         with:
-         cluster_name: jpcluster
-         location: us-central1-a
-         project_id: grand-forge-472709-a0
+          cluster_name: ${{ secrets.GKE_CLUSTER_NAME }}
+          location: ${{ secrets.GKE_CLUSTER_ZONE }}
+          project_id: ${{ secrets.GCP_PROJECT }}
+
+      # 6️⃣ Deploy Salesforce Job to Kubernetes
       - name: Deploy Salesforce Job
+        env:
+          IMAGE_TAG: jayaprakashitc/salesforce-deployer:latest
         run: |
-          sed "s|\$***IMAGE***|$***IMAGE_TAG***|" kubernetes/base/job-deploy.yaml | kubectl create -f -
+          echo "Replacing image placeholder and deploying Job..."
+          sed "s#\$***IMAGE***#${IMAGE_TAG}#g" kubernetes/base/job-deploy.yaml | kubectl create -f -
