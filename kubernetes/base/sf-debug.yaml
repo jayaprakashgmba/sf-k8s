@@ -5,6 +5,6 @@ metadata:
 spec:
   containers:
     - name: sf-cli
-      image: salesforce-deployer
+      image: salesforce-jayaprakashitc/salesforce-deployer
       command: ["sleep", "3600"]
   restartPolicy: Never
