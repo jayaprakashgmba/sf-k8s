@@ -32,10 +32,11 @@ jobs:
       # 4️⃣ Set Docker image variable
       - name: Set IMAGE variable
         run: echo "IMAGE_TAG=jayaprakashitc/salesforce-deployer:latest" >> $GITHUB_ENV
-
-      # 5️⃣ Deploy to Kubernetes
+      - name: Setup kubeconfig
+        run: |
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.KUBECONFIG_DATA }}" | base64 --decode > $HOME/.kube/config
+      
       - name: Deploy Salesforce Job to Kubernetes
         run: |
-          sed "s|\${IMAGE}|${IMAGE_TAG}|" kubernetes/base/job-deploy.yaml | kubectl apply -f -
-        env:
-          KUBECONFIG: ${{ secrets.KUBECONFIG }}
+         sed "s|\${IMAGE}|${IMAGE_TAG}|" kubernetes/base/job-deploy.yaml | kubectl apply -f -
