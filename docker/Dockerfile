@@ -21,4 +21,4 @@ COPY deploy.sh /app/deploy.sh
 RUN chmod +x /app/deploy.sh
 
 # Default entrypoint
-ENTRYPOINT ["/app/deploy.sh"]
+ENTRYPOINT ["/docker/deploy.sh"]
