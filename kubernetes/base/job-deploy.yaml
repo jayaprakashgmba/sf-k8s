@@ -13,7 +13,7 @@ spec:
       restartPolicy: Never
       containers:
         - name: sf-cli
-          image: your-registry/salesforce-deployer:latest
+          image: jayaprakashitc/salesforce-deployer
           env:
             - name: SF_USERNAME
               valueFrom:
